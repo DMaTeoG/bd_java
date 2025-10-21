@@ -8,7 +8,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.ucc.connection.DatabaseConnection;
+import com.ucc.Connection.DatabaseConnection;
 import com.ucc.model.Actor;
 
 public class ActorRepository implements IRepository{
@@ -46,4 +46,61 @@ public class ActorRepository implements IRepository{
         return actor;
     }
     
+    @Override
+    public Actor update(int currentActorId, Actor actor) throws SQLException {
+        String sql = "UPDATE sakila.actor SET actor_id = ?, first_name = ?, last_name = ? WHERE actor_id = ?";
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
+            ps.setInt(1, actor.getActor_id());
+            ps.setString(2, actor.getFirst_name());
+            ps.setString(3, actor.getLast_name());
+            ps.setInt(4, currentActorId);
+        if (ps.executeUpdate() == 0) {
+            throw new SQLException("No existe actor con id " + currentActorId);
+        }
+    }
+    return actor;
+}
+    @Override
+    public boolean delete(int actorId) throws SQLException {
+    String sql = "DELETE FROM sakila.actor WHERE actor_id = ?";
+    try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
+        ps.setInt(1, actorId);
+        return ps.executeUpdate() > 0;
+    }
+}
+   
+@Override
+public List<Actor> findByIdOrName(Integer actorId, String name) throws SQLException {
+    if (actorId == null && (name == null || name.isBlank())) {
+        return findAll();
+    } 
+    List<Actor> actors = new ArrayList<>();
+    String sql = "SELECT * FROM sakila.actor WHERE 1=1";
+    if (actorId != null) {
+        sql += " AND actor_id = ?";
+    }
+    if (name != null && !name.isBlank()) {
+        sql += " AND (first_name LIKE ? OR last_name LIKE ?)";
+    }
+    try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
+        int index = 1;
+        if (actorId != null) {
+            ps.setInt(index++, actorId);
+        }
+        if (name != null && !name.isBlank()) {
+            ps.setString(index++, "%" + name + "%");
+            ps.setString(index, "%" + name + "%");
+        }
+        try (ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                Actor actor = new Actor();
+                actor.setActor_id(rs.getInt("actor_id"));
+                actor.setFirst_name(rs.getString("first_name"));
+                actor.setLast_name(rs.getString("last_name"));
+                actors.add(actor);
+                 }
+            }
+        }
+     return actors;
+    }
 }
